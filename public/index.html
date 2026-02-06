@@ -117,8 +117,8 @@
         resultDiv.style.display = "none";
 
         try {
-            // Local testing ke liye localhost URL
-            const response = await fetch('http://localhost:5000/api/admin/register-client', {
+            // Updated URL to Render Production Link
+            const response = await fetch('https://meresamna.onrender.com/api/admin/register-client', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json' 
