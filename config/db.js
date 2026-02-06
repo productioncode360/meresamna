@@ -1,45 +1,47 @@
 const mongoose = require('mongoose');
 
-const connections = {}; // Connections cache karne ke liye
-const modelsCache = {}; // Models cache karne ke liye
+const connections = {}; 
+const modelsCache = {}; 
 
 const getModels = async (serviceName) => {
-    const mainUri = process.env.MAIN_DB_URI || 'mongodb://127.0.0.1:27017';
-    const engineDbName = process.env.ENGINE_DB_NAME || 'engine_core_private';
+    // 1. Base URI ko dhyan se uthayein
+    const baseUri = process.env.MAIN_DB_URI;
+    const engineDbName = process.env.ENGINE_DB_NAME || 'engine_core_privateer';
 
-    // 1. Engine DB Connection (Master Database)
+    if (!baseUri) throw new Error("MAIN_DB_URI is missing in .env");
+
+    // 2. Engine DB Connection
     if (!connections['engine']) {
-        connections['engine'] = await mongoose.createConnection(`${mainUri}/${engineDbName}`).asPromise();
+        // Atlas ke liye options specify karna behtar hota hai
+        connections['engine'] = await mongoose.createConnection(baseUri, {
+            dbName: engineDbName, // Database name yahan specify karein, URI modify karne ki zarurat nahi
+        }).asPromise();
         console.log(`🛡️  Engine DB Connected: [${engineDbName}]`);
     }
     const engineConn = connections['engine'];
 
-    // 2. Client DB Connection (Dynamic based on Client-ID)
-    // Agar hum 'engine-core' mang rahe hain, toh sirf engineConn hi use hoga
+    // 3. Client DB Connection
     let clientConn = engineConn; 
     if (serviceName !== 'engine-core') {
         if (!connections[serviceName]) {
             const clientDbName = `${serviceName}_db`;
-            connections[serviceName] = await mongoose.createConnection(`${mainUri}/${clientDbName}`).asPromise();
+            connections[serviceName] = await mongoose.createConnection(baseUri, {
+                dbName: clientDbName,
+            }).asPromise();
             console.log(`🍃 New Client DB Connected: [${clientDbName}]`);
         }
         clientConn = connections[serviceName];
     }
 
-    // 3. Models load karein (Cache management)
+    // 4. Models Cache
     if (!modelsCache[serviceName]) {
         const UserSchema = require('../models/User');
         const OtpLogSchema = require('../models/OtpLog');
-        const ClientSchema = require('../models/Client'); // Naya Client Schema
+        const ClientSchema = require('../models/Client');
 
         modelsCache[serviceName] = {
-            // User hamesha Client ke specific DB mein jayega
             User: clientConn.model('User', UserSchema),
-            
-            // OtpLog hamesha Engine (Master) DB mein rahega
             OtpLog: engineConn.model('OtpLog', OtpLogSchema),
-            
-            // Client registration data hamesha Engine DB mein rahega
             Client: engineConn.model('Client', ClientSchema)
         };
     }
