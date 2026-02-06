@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Engine | Developer Onboarding</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #121212; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            color: white;
+        }
+        .card { 
+            background: #1e1e1e; 
+            padding: 2.5rem; 
+            border-radius: 15px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5); 
+            width: 100%; 
+            max-width: 450px; 
+            border: 1px solid #333;
+        }
+        h2 { text-align: center; margin-bottom: 2rem; color: #fff; font-weight: 600; }
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 8px; color: #bbb; font-size: 0.9rem; }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #444; 
+            border-radius: 8px; 
+            background: #2d2d2d; 
+            color: white; 
+            box-sizing: border-box;
+            outline: none;
+        }
+        input:focus { border-color: #007bff; }
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            background: #007bff; 
+            border: none; 
+            color: white; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            font-weight: bold;
+            transition: 0.3s; 
+        }
+        button:hover { background: #0056b3; transform: translateY(-1px); }
+        button:disabled { background: #444; cursor: not-allowed; }
+
+        #result { 
+            margin-top: 2rem; 
+            padding: 1.2rem; 
+            border-radius: 8px; 
+            display: none; 
+            word-break: break-all; 
+            text-align: center;
+        }
+        .success { background: #1b4332; color: #74c69d; border: 1px solid #2d6a4f; }
+        .error { background: #431b1b; color: #e5989b; border: 1px solid #660708; }
+        .api-key { 
+            font-weight: bold; 
+            color: #00d4ff; 
+            display: block; 
+            margin: 15px 0; 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 1.3rem; 
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Auth Engine Setup</h2>
+    
+    <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="userName" placeholder="e.g. Rahul Sharma">
+    </div>
+    
+    <div class="form-group">
+        <label>Work Email</label>
+        <input type="email" id="userEmail" placeholder="name@company.com">
+    </div>
+    
+    <button id="submitBtn" onclick="registerClient()">Generate API Key</button>
+
+    <div id="result"></div>
+</div>
+
+<script>
+    async function registerClient() {
+        const nameInput = document.getElementById('userName');
+        const emailInput = document.getElementById('userEmail');
+        const btn = document.getElementById('submitBtn');
+        const resultDiv = document.getElementById('result');
+
+        const name = nameInput.value.trim();
+        const email = emailInput.value.trim();
+
+        if(!name || !email) {
+            alert("Bhai, details toh bharo!");
+            return;
+        }
+
+        // UI Updates
+        btn.disabled = true;
+        btn.innerText = "Generating...";
+        resultDiv.style.display = "none";
+
+        try {
+            // Local testing ke liye localhost URL
+            const response = await fetch('http://localhost:5000/api/admin/register-client', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ name, email })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                resultDiv.className = "success";
+                resultDiv.style.display = "block";
+                resultDiv.innerHTML = `
+                    <div style="font-size: 0.9rem;">Registration Successful! ✅</div>
+                    <div class="api-key" id="keyText">${data.data.clientId}</div>
+                    <small style="color: #bbb;">Save this key! Use it as <b>x-client-id</b> in your headers.</small>
+                `;
+            } else {
+                throw new Error(data.message || "Email already exists or server error");
+            }
+        } catch (error) {
+            resultDiv.className = "error";
+            resultDiv.style.display = "block";
+            resultDiv.innerText = "Error: " + error.message;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Generate API Key";
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Firebase Auth Portal | ClientB</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; display: flex; justify-content: center; padding: 50px; }
+        .container { background: #1e1e1e; padding: 30px; border-radius: 15px; width: 400px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        h2 { text-align: center; margin-bottom: 20px; color: #fff; }
+        button { width: 100%; padding: 12px; border: none; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 10px 0; transition: 0.3s; }
+        button.google { background: #db4437; }
+        button.red { background: #dc3545; }
+        .msg { margin-top: 10px; font-size: 14px; text-align: center; color: #0f0; min-height: 20px; }
+        .msg.error { color: #f55; }
+        .tabs { display: flex; justify-content: space-around; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .tab { padding: 8px 12px; border-radius: 5px; font-size: 14px; color: #bbb; cursor: pointer; }
+        .tab.active { background: #007bff; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .profile-card { background: #252525; padding: 15px; border-radius: 8px; font-size: 14px; margin-top: 10px; border-left: 4px solid #db4437; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚀 ClientB Google Auth</h2>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="login">Login</div>
+        <div class="tab" data-tab="profile">Profile</div>
+    </div>
+
+    <div class="tab-content active" id="login">
+        <p style="text-align: center; color: #bbb;">Welcome! Please use your Google account to continue.</p>
+        <button class="google" onclick="googleLogin()">Sign in with Google</button>
+        <div id="loginMsg" class="msg"></div>
+    </div>
+
+    <div class="tab-content" id="profile">
+        <div id="profileInfo" class="profile-card">Not logged in</div>
+        <button class="red" onclick="handleLogout()">Logout from System</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBKf34DnjN3jc7XTyHbKwWdv2tqN_8ThuQ",
+        authDomain: "backendauth-7ad2a.firebaseapp.com",
+        projectId: "backendauth-7ad2a",
+        storageBucket: "backendauth-7ad2a.firebasestorage.app",
+        messagingSenderId: "107612920798",
+        appId: "1:107612920798:web:19fa7988fa985e200e5b4f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    window.googleLogin = async () => {
+        try {
+            showMsg('loginMsg', 'Opening Google Popup...');
+            const result = await signInWithPopup(auth, provider);
+            const idToken = await result.user.getIdToken();
+
+            // Suffix ty58d is for Google Auth as per your engine
+            const res = await fetch(`http://localhost:5005/api/auth/google-login_ty58d`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken })
+            });
+
+            const data = await res.json();
+            if(res.ok) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('activeModule', 'ty58d');
+                updateProfileUI(data.user);
+                showMsg('loginMsg', '✅ Authenticated with Backend!');
+                setTimeout(() => document.querySelector('[data-tab="profile"]').click(), 1000);
+            } else {
+                showMsg('loginMsg', 'Backend Sync Failed: ' + data.message, true);
+            }
+        } catch (error) {
+            showMsg('loginMsg', 'Google Error: ' + error.message, true);
+        }
+    };
+
+    window.firebaseSignOut = () => signOut(auth);
+</script>
+
+<script>
+const API = "http://localhost:5005/api/auth";
+
+// Tab Switching logic
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+});
+
+function showMsg(id, text, error=false) {
+    const el = document.getElementById(id);
+    if(el) {
+        el.innerText = text;
+        el.className = error ? 'msg error' : 'msg';
+    }
+}
+
+function updateProfileUI(user) {
+    const profileEl = document.getElementById('profileInfo');
+    if(user) {
+        profileEl.innerHTML = `
+            <strong>Name:</strong> ${user.name}<br>
+            <strong>Email:</strong> ${user.email}<br>
+            <strong>Method:</strong> Google (ty58d) 🛡️`;
+    } else {
+        profileEl.innerText = 'Not logged in';
+    }
+}
+
+async function handleLogout() {
+    try {
+        // Backend logout call
+        await fetch(`${API}/logout_ty58d`, { method: 'POST' });
+        
+        // Firebase logout
+        if(window.firebaseSignOut) await window.firebaseSignOut();
+        
+        localStorage.clear();
+        location.reload();
+    } catch(err) { 
+        localStorage.clear();
+        location.reload(); 
+    }
+}
+
+// Check if already logged in on load
+window.onload = () => {
+    const token = localStorage.getItem('token');
+    if(token) {
+        // Aap yahan ek /me api call karke user data fetch kar sakte hain
+        // Abhi ke liye screen switch kar dete hain
+        document.querySelector('[data-tab="profile"]').click();
+    }
+}
+</script>
+
+</body>
+</html>
