@@ -7,73 +7,84 @@
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #121212; 
+            background: #0f172a; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
             height: 100vh; 
             margin: 0; 
-            color: white;
+            color: #f8fafc;
         }
         .card { 
-            background: #1e1e1e; 
+            background: #1e293b; 
             padding: 2.5rem; 
-            border-radius: 15px; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5); 
+            border-radius: 16px; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); 
             width: 100%; 
             max-width: 450px; 
-            border: 1px solid #333;
+            border: 1px solid #334155;
         }
-        h2 { text-align: center; margin-bottom: 2rem; color: #fff; font-weight: 600; }
+        h2 { text-align: center; margin-bottom: 2rem; color: #38bdf8; font-weight: 700; letter-spacing: -0.025em; }
         .form-group { margin-bottom: 1.5rem; }
-        label { display: block; margin-bottom: 8px; color: #bbb; font-size: 0.9rem; }
+        label { display: block; margin-bottom: 8px; color: #94a3b8; font-size: 0.875rem; font-weight: 500; }
         input { 
             width: 100%; 
-            padding: 12px; 
-            border: 1px solid #444; 
+            padding: 12px 16px; 
+            border: 1px solid #334155; 
             border-radius: 8px; 
-            background: #2d2d2d; 
+            background: #0f172a; 
             color: white; 
             box-sizing: border-box;
             outline: none;
+            transition: border-color 0.2s;
         }
-        input:focus { border-color: #007bff; }
+        input:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
         button { 
             width: 100%; 
             padding: 14px; 
-            background: #007bff; 
+            background: #0284c7; 
             border: none; 
             color: white; 
             border-radius: 8px; 
             cursor: pointer; 
             font-size: 16px; 
-            font-weight: bold;
-            transition: 0.3s; 
+            font-weight: 600;
+            transition: all 0.2s; 
         }
-        button:hover { background: #0056b3; transform: translateY(-1px); }
-        button:disabled { background: #444; cursor: not-allowed; }
+        button:hover { background: #0369a1; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button:disabled { background: #475569; cursor: not-allowed; opacity: 0.7; }
 
         #result { 
             margin-top: 2rem; 
-            padding: 1.2rem; 
+            padding: 1.25rem; 
             border-radius: 8px; 
             display: none; 
             word-break: break-all; 
-            text-align: center;
+            animation: fadeIn 0.3s ease-out;
         }
-        .success { background: #1b4332; color: #74c69d; border: 1px solid #2d6a4f; }
-        .error { background: #431b1b; color: #e5989b; border: 1px solid #660708; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .success { background: rgba(21, 128, 61, 0.2); color: #4ade80; border: 1px solid #166534; }
+        .error { background: rgba(153, 27, 27, 0.2); color: #f87171; border: 1px solid #991b1b; }
+        
+        .api-key-box {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border: 1px dashed #38bdf8;
+            position: relative;
+        }
         .api-key { 
             font-weight: bold; 
-            color: #00d4ff; 
+            color: #38bdf8; 
             display: block; 
-            margin: 15px 0; 
-            font-family: 'Courier New', Courier, monospace; 
-            font-size: 1.3rem; 
-            background: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 5px;
+            font-family: 'ui-monospace', SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
+            font-size: 1.1rem;
+            text-align: center;
         }
+        .copy-hint { font-size: 0.75rem; color: #64748b; margin-top: 8px; display: block; text-align: center; }
     </style>
 </head>
 <body>
@@ -82,13 +93,13 @@
     <h2>Auth Engine Setup</h2>
     
     <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" id="userName" placeholder="e.g. Rahul Sharma">
+        <label>Developer/App Name</label>
+        <input type="text" id="userName" placeholder="e.g. My Awesome App">
     </div>
     
     <div class="form-group">
-        <label>Work Email</label>
-        <input type="email" id="userEmail" placeholder="name@company.com">
+        <label>Admin Email</label>
+        <input type="email" id="userEmail" placeholder="admin@example.com">
     </div>
     
     <button id="submitBtn" onclick="registerClient()">Generate API Key</button>
@@ -107,17 +118,17 @@
         const email = emailInput.value.trim();
 
         if(!name || !email) {
-            alert("Bhai, details toh bharo!");
+            alert("Bhai, Name aur Email fill karna mandatory hai!");
             return;
         }
 
-        // UI Updates
+        // Loading State
         btn.disabled = true;
-        btn.innerText = "Generating...";
+        btn.innerText = "Processing...";
         resultDiv.style.display = "none";
 
         try {
-            // Updated URL to Render Production Link
+            // UPDATED: Ab ye seedha aapke Render URL par request bhejega
             const response = await fetch('https://meresamna.onrender.com/api/admin/register-client', {
                 method: 'POST',
                 headers: { 
@@ -132,12 +143,17 @@
                 resultDiv.className = "success";
                 resultDiv.style.display = "block";
                 resultDiv.innerHTML = `
-                    <div style="font-size: 0.9rem;">Registration Successful! ✅</div>
-                    <div class="api-key" id="keyText">${data.data.clientId}</div>
-                    <small style="color: #bbb;">Save this key! Use it as <b>x-client-id</b> in your headers.</small>
+                    <div style="font-weight: 600; margin-bottom: 5px;">Success! Client Created.</div>
+                    <div class="api-key-box">
+                        <span class="api-key">${data.data.clientId}</span>
+                    </div>
+                    <span class="copy-hint">Copy this key! You need to send it in <b>x-client-id</b> header.</span>
                 `;
+                // Input clear kar do success ke baad
+                nameInput.value = '';
+                emailInput.value = '';
             } else {
-                throw new Error(data.message || "Email already exists or server error");
+                throw new Error(data.message || "Registration failed");
             }
         } catch (error) {
             resultDiv.className = "error";
